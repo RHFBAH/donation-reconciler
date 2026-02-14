@@ -294,6 +294,7 @@ export const parseDonationFile = async (file: File, userEncoding: string = 'auto
                 splitDetails: category === 'Split' ? Array.from(foundCategories) : undefined,
                 date: dateStr,
                 transactionId,
+                orderId: findValue(row, ['Order ID', 'OrderID', '#', 'رقم الطلب', 'المعرف']),
                 invoiceId: findValue(row, ['Invoice Id', 'Invoice ID', 'Invoice#', 'رقم الفاتورة', 'رقم الفاتوره']),
                 raw: row,
             }];
@@ -398,6 +399,7 @@ export const parseBankFile = async (file: File, userEncoding: string = 'auto'): 
                 // Prioritize specific IDs like Auth Code, RRN over generic IDs
                 traceId: findValue(row, ['AuthCode', 'Auth Code', 'RRN', 'Trace ID', 'Reference', 'رقم المرجع', 'المرجع', 'رقم العملية', 'كود التفويض', 'رمز المرجع']) || '',
                 mpgsOrderRef: findValue(row, ['MPGS Order Reference', 'Order Reference', 'MPGS Reference', 'مرجع MPGS', 'مرجع الطلب']),
+                mpgsOrderId: findValue(row, ['MPGS Order ID', 'MPGS ID', 'Merchant Order ID', 'رقم طلب MPGS', 'رقم الطلب']),
                 raw: row,
             };
         };

@@ -20,6 +20,7 @@ export interface DonationRecord {
     splitDetails?: string[]; // For donations with multiple categories
     date: string;
     transactionId: string;
+    orderId?: string; // New field for matching
     invoiceId?: string; // New field for MPGS matching
     raw?: any; // Original row data
 }
@@ -31,6 +32,7 @@ export interface BankRecord {
     description: string;
     traceId?: string;
     mpgsOrderRef?: string; // New field for Invoice matching
+    mpgsOrderId?: string; // New field for MPGS matching
     raw?: any; // Original row data
 }
 

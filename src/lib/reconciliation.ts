@@ -78,11 +78,17 @@ export const reconcileTransactions = (
             // Match by Auth Code (traceId) or MPGS Order Reference
             const isAuthMatch = (normId && normBankId === normId) || (normId && normDesc.includes(normId));
 
-            // Collect all invoice IDs from the donation group
+            // Collect all invoice IDs and order IDs from the donation group
             const groupInvoiceIds = group.map(d => normalizeId(d.invoiceId || '')).filter(id => id);
+            const groupOrderIds = group.map(d => normalizeId(d.orderId || '')).filter(id => id);
+
             const isInvoiceMatch = (normMpgs && groupInvoiceIds.includes(normMpgs)) || (normBankId && groupInvoiceIds.includes(normBankId));
 
-            return isAuthMatch || isInvoiceMatch;
+            // Match by Order ID
+            const normMpgsOrderId = normalizeId(entry.mpgsOrderId || '');
+            const isOrderMatch = (normMpgsOrderId && groupOrderIds.includes(normMpgsOrderId));
+
+            return isAuthMatch || isInvoiceMatch || isOrderMatch;
         });
 
         if (matchingBankEntry) {
