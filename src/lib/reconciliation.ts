@@ -2,19 +2,20 @@ import { DonationCategory, DonationRecord, BankRecord, ReconciledTransaction } f
 import { parse, differenceInDays } from 'date-fns';
 
 export const CATEGORY_MAP_AR: Record<DonationCategory, string> = {
-    Zakat: 'زكاة المال',
-    InsulinPumps: 'مضخات الأنسولين',
-    General: 'التبرع العام',
-    Debtors: 'الغارمين',
-    Health: 'المشاريع الصحية',
-    ProductiveFamilies: 'الأسر المنتجة',
-    Social: 'المشاريع الاجتماعية',
-    Furniture: 'الأثاث والأجهزة الكهربائية',
-    Education: 'المشاريع التعليمية',
-    Humanitarian: 'المساعدات الإنسانية',
-    Orphans: 'دينار اليتيم',
-    Split: 'تبرع مقسم',
+    Zakat: 'Zakat',
+    InsulinPumps: 'Insulin pumps',
+    General: 'General Donation',
+    Debtors: 'Indebted individuals',
+    Health: 'Health Projects',
+    ProductiveFamilies: 'Productive families',
+    Social: 'Social projects',
+    Furniture: 'Furnishing and Electrical Appliances',
+    Education: 'Educational Projects',
+    Humanitarian: 'Humanitarian Aid',
+    Orphans: 'Reassuring Homes Initiative',
+    Split: 'Split Donation',
 };
+
 
 // Default fee configuration: 1% commission + 10% VAT on commission = 1.1%
 const DEFAULT_FEE_PERCENT = 1.1;
