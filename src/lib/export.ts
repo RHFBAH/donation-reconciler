@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { ReconciledTransaction } from '../types/finance';
+import { UploadedDonationFile } from './store';
 import { CATEGORY_MAP_AR } from './reconciliation';
 
 export const exportToExcel = (transactions: ReconciledTransaction[]) => {
@@ -63,5 +64,88 @@ export const exportToExcel = (transactions: ReconciledTransaction[]) => {
     } catch (error) {
         console.error('Export failed:', error);
         alert('حدث خطأ أثناء تصدير الملف. يرجى المحاولة مرة أخرى.');
+    }
+};
+
+// Helper: find which uploaded file a donation belongs to
+const getDonationSourceFile = (donationId: string, uploadedFiles: UploadedDonationFile[]): string => {
+    for (const f of uploadedFiles) {
+        if (f.ids.includes(donationId)) return f.name;
+    }
+    return 'غير محدد';
+};
+
+export const exportBankReport = (
+    transactions: ReconciledTransaction[],
+    uploadedFiles: UploadedDonationFile[]
+) => {
+    // Only include bank-perspective rows (all bank records + unmatched donations)
+    const bankRows = transactions.filter(
+        t => t.bankRecord || t.reconciliation.status === 'extra_bank_entry'
+    );
+
+    const data = bankRows.map((item) => {
+        const isMatched = item.reconciliation.status === 'matched';
+        const sourceFile = isMatched && item.donation
+            ? getDonationSourceFile(item.donation.id, uploadedFiles)
+            : '';
+
+        // Build category detail string
+        let categoryDetail = '';
+        if (isMatched && item.donation) {
+            if (item.donation.category === 'Split' && item.donation.splitDetails && item.donation.splitDetails.length > 0) {
+                categoryDetail = item.donation.splitDetails
+                    .map(c => CATEGORY_MAP_AR[c as keyof typeof CATEGORY_MAP_AR] || c)
+                    .join(' + ');
+            } else {
+                categoryDetail = CATEGORY_MAP_AR[item.donation.category] || item.donation.category;
+            }
+        }
+
+        return {
+            'التاريخ': item.bankRecord?.date || '',
+            'البيان': item.bankRecord?.description || '',
+            'المبلغ البنكي': item.bankRecord?.amount ? Number(item.bankRecord.amount.toFixed(3)) : '',
+            'رقم المرجع (Auth)': item.bankRecord?.traceId || '',
+            'حالة المطابقة': isMatched ? '✓ متطابق' : '✗ لا يوجد تطابق',
+            'اسم المتبرع': isMatched ? (item.donation?.donorName || '') : '',
+            'مبلغ التبرع (Gross)': isMatched && item.donation?.amount ? Number(item.donation.amount.toFixed(3)) : '',
+            'تفصيل الفئة': categoryDetail,
+            'الرسوم': isMatched ? Number(item.reconciliation.feeAmount.toFixed(3)) : '',
+            'رقم الطلب (Order ID)': isMatched ? (item.donation?.orderId || item.donation?.transactionId || '') : '',
+            'مصدر التطابق (الملف)': sourceFile,
+        };
+    });
+
+
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    // Style header row width (11 columns)
+    ws['!cols'] = [
+        { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 20 },
+        { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 25 },
+        { wch: 12 }, { wch: 22 }, { wch: 35 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, ws, 'تقرير البنك');
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `Bank_Report_${dateStr}.xlsx`;
+
+    try {
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const dataBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100);
+    } catch (error) {
+        console.error('Bank report export failed:', error);
+        alert('حدث خطأ أثناء تصدير التقرير.');
     }
 };

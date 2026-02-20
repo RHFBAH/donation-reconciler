@@ -1,21 +1,29 @@
 'use client';
 
 import React from 'react';
-import { Download, FileText, Printer, Copy } from 'lucide-react';
+import { Download, FileText, Printer, Copy, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ReconciledTransaction } from '@/types/finance';
-import { exportToExcel } from '@/lib/export';
+import { exportToExcel, exportBankReport } from '@/lib/export';
 import { exportToPDF } from '@/lib/pdf-export';
+import { useReconciliationStore } from '@/lib/store';
 
 interface QuickActionsProps {
     transactions: ReconciledTransaction[];
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ transactions }) => {
+    const { uploadedDonationFiles } = useReconciliationStore();
 
     const handleExportExcel = () => {
         if (transactions.length > 0) {
             exportToExcel(transactions);
+        }
+    };
+
+    const handleExportBankReport = () => {
+        if (transactions.length > 0) {
+            exportBankReport(transactions, uploadedDonationFiles);
         }
     };
 
@@ -39,18 +47,18 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ transactions }) => {
     const actions = [
         {
             icon: Download,
-            label: 'Excel',
+            label: 'تصدير Excel (كامل)',
             onClick: handleExportExcel,
             color: 'from-green-500 to-green-600',
             hoverColor: 'hover:shadow-green-500/50'
         },
-        /* {
-            icon: FileText,
-            label: 'PDF',
-            onClick: handleExportPDF,
-            color: 'from-red-500 to-red-600',
-            hoverColor: 'hover:shadow-red-500/50'
-        }, */
+        {
+            icon: Building2,
+            label: 'تقرير البنك (مع المصادر)',
+            onClick: handleExportBankReport,
+            color: 'from-indigo-500 to-indigo-600',
+            hoverColor: 'hover:shadow-indigo-500/50'
+        },
         {
             icon: Printer,
             label: 'طباعة',
@@ -78,10 +86,13 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ transactions }) => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={action.onClick}
-                    className={`p-3 rounded-full bg-gradient-to-br ${action.color} text-white shadow-lg ${action.hoverColor} hover:shadow-xl transition-all group`}
+                    className={`p-3 rounded-full bg-gradient-to-br ${action.color} text-white shadow-lg ${action.hoverColor} hover:shadow-xl transition-all group relative`}
                     title={action.label}
                 >
                     <action.icon size={20} />
+                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        {action.label}
+                    </span>
                 </motion.button>
             ))}
         </div>
