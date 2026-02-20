@@ -26,7 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Dashboard() {
-  const { reconciledTransactions, reset, donations, bankRecords } = useReconciliationStore();
+  const { reconciledTransactions, reset, donations, bankRecords, uploadedDonationFiles } = useReconciliationStore();
   const [activeView, setActiveView] = useState<'matched' | 'unmatched' | 'unmatched_donation'>('matched');
   const [showCategorySummary, setShowCategorySummary] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -123,7 +123,7 @@ export default function Dashboard() {
 
   if (!mounted) return null;
 
-  if (donations.length === 0 || bankRecords.length === 0) {
+  if (uploadedDonationFiles.length === 0 || bankRecords.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center px-6 py-12" dir="rtl">
         <div className="w-full max-w-3xl space-y-12">
@@ -140,7 +140,7 @@ export default function Dashboard() {
               أهلاً بك في نظام <span className="text-indigo-600">المطابقة الذكي</span>
             </h1>
             <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
-              ارفع ملفات التبرعات وكشوفات البنك للبدء في عملية التحليل والمطابقة التلقائية.
+              ارفع تقارير التبرعات (لمرة واحدة + شهرية) وكشف حساب البنك للبدء في المطابقة التلقائية.
             </p>
           </motion.div>
 
