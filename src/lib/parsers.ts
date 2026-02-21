@@ -57,6 +57,15 @@ const CATEGORY_KEYWORD_MAP: Record<string, DonationCategory> = {
     'مساعدات': 'Humanitarian',
     'إغاثة': 'Humanitarian',
     'عام': 'General',
+    'بلسم': 'HealingAndHope',
+    'مبادرة بلسم': 'HealingAndHope',
+    'التوحد': 'AutismCenter',
+    'المركز التعليمي': 'AutismCenter',
+    'دينار اليتيم': 'OrphansDinar',
+    'تأثيث': 'Furniture',
+    'أجهزة': 'Furniture',
+    'بيوت': 'Orphans',
+    'مطمئنة': 'Orphans',
 
     // English (for Order Items Summary which might be in English)
     'Zakat': 'Zakat',
@@ -67,16 +76,28 @@ const CATEGORY_KEYWORD_MAP: Record<string, DonationCategory> = {
     'Education': 'Education',
     'Student': 'Education',
     'Debtor': 'Debtors',
+    'Indebted': 'Debtors',
     'Family': 'ProductiveFamilies',
     'Families': 'ProductiveFamilies',
     'Insulin': 'InsulinPumps',
     'Pump': 'InsulinPumps',
+    'pumps': 'InsulinPumps',
     'Social': 'Social',
     'Furniture': 'Furniture',
+    'Furnishings': 'Furniture',
+    'Furnishing': 'Furniture',
+    'Appliances': 'Furniture',
+    'Electrical': 'Furniture',
     'Humanitarian': 'Humanitarian',
     'Aid': 'Humanitarian',
     'Relief': 'Humanitarian',
     'General': 'General',
+    'Healing': 'HealingAndHope',
+    'Hope': 'HealingAndHope',
+    'Autism': 'AutismCenter',
+    'Learning': 'AutismCenter',
+    'Orphan\'s Dinar': 'OrphansDinar',
+    'Orphans Dinar': 'OrphansDinar',
 };
 
 // Heuristic to detect date format (US vs UK)
@@ -224,45 +245,63 @@ export const parseDonationFile = async (file: File, userEncoding: string = 'auto
             // Look for 'Order Items Summary' and other category columns
             const rawCategory = findValue(row, ['Order Items Summary', 'Items', 'Product', 'Category', 'Type', 'Account', 'البند', 'نوع التبرع', 'الحساب', 'التصنيف']);
 
-            // Attempt to parse split items (e.g. "25 Education, 25 Health")
-            const parts = rawCategory.split(/[,،\n]/).map(p => p.trim()).filter(p => p);
-            const splitItems: { category: DonationCategory, amount: number }[] = [];
+            // Robust extraction of multiple categories and amounts
+            const catMap = new Map<DonationCategory, number>();
+            const lowerCat = rawCategory.toLowerCase();
 
-            if (parts.length > 1) {
-                for (const part of parts) {
-                    // Extract amount from part
-                    const partAmountMatch = part.match(/[0-9]+(\.[0-9]+)?/);
-                    const partAmount = partAmountMatch ? parseFloat(partAmountMatch[0]) : 0;
+            // 1. Identify all segment matches
+            const segments = rawCategory.split(/[\n•\-*|]|\s{2,}|[,،](?!\s*\d)/).map(s => s.trim()).filter(s => s);
 
-                    // Extract category from part
-                    let partCategory: DonationCategory | null = null;
-                    for (const [key, mappedCategory] of Object.entries(CATEGORY_KEYWORD_MAP)) {
-                        if (part.toLowerCase().includes(key.toLowerCase())) {
-                            partCategory = mappedCategory;
-                            break;
-                        }
+            for (const seg of segments) {
+                const segLower = seg.toLowerCase();
+                let foundCat: DonationCategory | null = null;
+
+                // Find first matching category in this segment
+                for (const [kw, cat] of Object.entries(CATEGORY_KEYWORD_MAP)) {
+                    if (segLower.includes(kw.toLowerCase())) {
+                        foundCat = cat;
+                        break;
                     }
+                }
 
-                    if (partCategory && partAmount > 0) {
-                        splitItems.push({ category: partCategory, amount: partAmount });
-                    }
+                if (foundCat) {
+                    const amountMatch = seg.match(/[0-9]+(\.[0-9]+)?/);
+                    const val = amountMatch ? parseFloat(amountMatch[0]) : 0;
+                    catMap.set(foundCat, (catMap.get(foundCat) || 0) + val);
                 }
             }
 
-            // Validation: Check if split items sum checks out roughly OR we found multiple valid parts
-            const splitTotal = splitItems.reduce((sum, item) => sum + item.amount, 0);
-            const isSplitValid = splitItems.length > 1 && Math.abs(splitTotal - amount) < 1.0; // Tolerance of 1.0 for float issues
+            // Always explode if multiple valid categories are found
+            if (catMap.size > 1) {
+                const entries = Array.from(catMap.entries());
+                const totalExplicitAmount = entries.reduce((sum, [_, amt]) => sum + amt, 0);
 
-            if (isSplitValid) {
-                return splitItems.map((item, i) => ({
-                    id: `don-${index}-split-${i}-${Date.now()}`,
-                    donorName,
-                    amount: item.amount,
-                    category: item.category,
-                    date: dateStr,
-                    transactionId, // Same Transaction ID for all splits
-                    raw: row,
-                }));
+                return entries.map(([category, catAmt], i) => {
+                    let finalAmount = catAmt;
+                    if (totalExplicitAmount > 0) {
+                        finalAmount = (catAmt / totalExplicitAmount) * amount;
+                    } else {
+                        finalAmount = amount / catMap.size;
+                    }
+
+                    // Auto-categorize monthly orders (order_ prefix) as OrphansDinar if General
+                    let finalCategory = category;
+                    if (finalCategory === 'General' && transactionId.toLowerCase().startsWith('order_')) {
+                        finalCategory = 'OrphansDinar';
+                    }
+
+                    return {
+                        id: `don-${index}-split-${i}-${Date.now()}`,
+                        donorName,
+                        amount: finalAmount,
+                        category: finalCategory,
+                        date: dateStr,
+                        transactionId,
+                        orderId: findValue(row, ['Order ID', 'OrderID', '#', 'رقم الطلب', 'المعرف']),
+                        invoiceId: findValue(row, ['Invoice Id', 'Invoice ID', 'Invoice#', 'رقم الفاتورة', 'رقم الفاتوره']),
+                        raw: row,
+                    };
+                });
             }
 
             // Fallback to single record (existing logic)
@@ -275,15 +314,13 @@ export const parseDonationFile = async (file: File, userEncoding: string = 'auto
                 }
             }
 
-            // Remove 'General' if we have other specific categories
-            if (foundCategories.size > 1 && foundCategories.has('General')) {
-                foundCategories.delete('General');
-            }
-
             if (foundCategories.size === 1) {
                 category = Array.from(foundCategories)[0];
-            } else if (foundCategories.size > 1) {
-                category = 'Split';
+            }
+
+            // Auto-categorize monthly orders (order_ prefix) as OrphansDinar if General
+            if (category === 'General' && transactionId.toLowerCase().startsWith('order_')) {
+                category = 'OrphansDinar';
             }
 
             return [{
@@ -291,7 +328,6 @@ export const parseDonationFile = async (file: File, userEncoding: string = 'auto
                 donorName,
                 amount,
                 category,
-                splitDetails: category === 'Split' ? Array.from(foundCategories) : undefined,
                 date: dateStr,
                 transactionId,
                 orderId: findValue(row, ['Order ID', 'OrderID', '#', 'رقم الطلب', 'المعرف']),

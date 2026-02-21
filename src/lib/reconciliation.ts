@@ -13,9 +13,24 @@ export const CATEGORY_MAP_AR: Record<DonationCategory, string> = {
     Education: 'Educational Projects',
     Humanitarian: 'Humanitarian Aid',
     Orphans: 'Reassuring Homes Initiative',
+    HealingAndHope: 'Healing and Hope Initiative',
+    AutismCenter: 'Educational and Rehabilitation Center for Children with Autism',
+    OrphansDinar: "Orphan's Dinar",
     Split: 'Split Donation',
 };
 
+/**
+ * Returns the display label for a donation category.
+ * For 'General': returns "Orphan's Dinar" if transactionId starts with 'order_'
+ * (monthly donation), otherwise returns 'General Donation'.
+ */
+export const getCategoryLabel = (category: string, transactionId?: string): string => {
+    if (category === 'OrphansDinar') return "Orphan's Dinar";
+    // If it's explicitly General, keep it as General Donation
+    if (category === 'General') return CATEGORY_MAP_AR.General;
+
+    return CATEGORY_MAP_AR[category as keyof typeof CATEGORY_MAP_AR] || category;
+};
 
 // Default fee configuration: 1% commission + 10% VAT on commission = 1.1%
 const DEFAULT_FEE_PERCENT = 1.1;
@@ -152,10 +167,16 @@ export const reconcileTransactions = (
 
     const allTransactions = [...reconciledDonations, ...extraBankEntries];
 
-    // Sort by date (oldest to newest)
+    // Sort by date (oldest to newest), then by transactionId to keep groups together
     return allTransactions.sort((a, b) => {
         const dateA = a.bankRecord?.date || a.donation?.date || '';
         const dateB = b.bankRecord?.date || b.donation?.date || '';
-        return dateA.localeCompare(dateB);
+        const dateCompare = dateA.localeCompare(dateB);
+        if (dateCompare !== 0) return dateCompare;
+
+        // Same date: keep transactions with same ID together
+        const idA = (a.donation?.transactionId || a.bankRecord?.traceId || '').replace(/[^a-zA-Z0-9]/g, '');
+        const idB = (b.donation?.transactionId || b.bankRecord?.traceId || '').replace(/[^a-zA-Z0-9]/g, '');
+        return idA.localeCompare(idB);
     });
 };

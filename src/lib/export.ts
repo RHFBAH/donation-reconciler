@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { ReconciledTransaction } from '../types/finance';
 import { UploadedDonationFile } from './store';
-import { CATEGORY_MAP_AR } from './reconciliation';
+import { CATEGORY_MAP_AR, getCategoryLabel } from './reconciliation';
 
 export const exportToExcel = (transactions: ReconciledTransaction[]) => {
     const data = transactions.map((item) => {
@@ -21,9 +21,11 @@ export const exportToExcel = (transactions: ReconciledTransaction[]) => {
             'الفرق': item.reconciliation.difference.toFixed(3),
             'مرجع العملية': item.donation?.transactionId || item.bankRecord?.traceId || '',
             'التصنيف': item.donation ? (
-                item.donation.category === 'Split' && item.donation.splitDetails
-                    ? `تبرع مقسم: ${item.donation.splitDetails.map(c => CATEGORY_MAP_AR[c as keyof typeof CATEGORY_MAP_AR] || c).join('، ')}`
-                    : CATEGORY_MAP_AR[item.donation.category]
+                item.donation.category === 'Split'
+                    ? (item.donation.splitAmounts
+                        ? `تبرع مقسم: ${item.donation.splitAmounts.map(s => `${getCategoryLabel(s.category, item.donation!.transactionId)} (${s.amount.toFixed(3)})`).join('، ')}`
+                        : `تبرع مقسم: ${item.donation.splitDetails?.map(c => getCategoryLabel(c, item.donation!.transactionId)).join('، ')}`)
+                    : getCategoryLabel(item.donation.category, item.donation.transactionId)
             ) : 'إدخال بنكي',
             'الحالة': statusMap[item.reconciliation.status],
         };
@@ -93,12 +95,18 @@ export const exportBankReport = (
         // Build category detail string
         let categoryDetail = '';
         if (isMatched && item.donation) {
-            if (item.donation.category === 'Split' && item.donation.splitDetails && item.donation.splitDetails.length > 0) {
-                categoryDetail = item.donation.splitDetails
-                    .map(c => CATEGORY_MAP_AR[c as keyof typeof CATEGORY_MAP_AR] || c)
-                    .join(' + ');
+            if (item.donation.category === 'Split') {
+                if (item.donation.splitAmounts && item.donation.splitAmounts.length > 0) {
+                    categoryDetail = item.donation.splitAmounts
+                        .map(s => `${getCategoryLabel(s.category, item.donation!.transactionId)} (${s.amount.toFixed(3)})`)
+                        .join(' + ');
+                } else if (item.donation.splitDetails && item.donation.splitDetails.length > 0) {
+                    categoryDetail = item.donation.splitDetails
+                        .map(c => getCategoryLabel(c, item.donation!.transactionId))
+                        .join(' + ');
+                }
             } else {
-                categoryDetail = CATEGORY_MAP_AR[item.donation.category] || item.donation.category;
+                categoryDetail = getCategoryLabel(item.donation.category, item.donation.transactionId);
             }
         }
 
@@ -112,6 +120,7 @@ export const exportBankReport = (
             'مبلغ التبرع (Gross)': isMatched && item.donation?.amount ? Number(item.donation.amount.toFixed(3)) : '',
             'تفصيل الفئة': categoryDetail,
             'الرسوم': isMatched ? Number(item.reconciliation.feeAmount.toFixed(3)) : '',
+            'المبلغ المحصل (الصافي)': isMatched ? Number((item.reconciliation.netActual || 0).toFixed(3)) : '',
             'رقم الطلب (Order ID)': isMatched ? (item.donation?.orderId || item.donation?.transactionId || '') : '',
             'مصدر التطابق (الملف)': sourceFile,
         };
@@ -120,11 +129,11 @@ export const exportBankReport = (
 
     const ws = XLSX.utils.json_to_sheet(data);
 
-    // Style header row width (11 columns)
+    // Style header row width (12 columns)
     ws['!cols'] = [
         { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 20 },
         { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 25 },
-        { wch: 12 }, { wch: 22 }, { wch: 35 }
+        { wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 35 }
     ];
 
     const workbook = XLSX.utils.book_new();

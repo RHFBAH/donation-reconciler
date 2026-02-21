@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { CATEGORY_MAP_AR } from '@/lib/reconciliation';
+import { CATEGORY_MAP_AR, getCategoryLabel } from '@/lib/reconciliation';
 import { useReconciliationStore } from '@/lib/store';
 import { FileUpload } from '@/components/FileUpload';
 import { FilterPanel, FilterOptions } from '@/components/FilterPanel';
@@ -93,14 +93,37 @@ export default function Dashboard() {
   const categorySummary = useMemo(() => {
     if (activeView !== 'matched') return null;
 
-    const summary: Record<string, { total: number; count: number }> = {};
+    // Key = "category||label" to separate Orphan's Dinar from General Donation
+    const summary: Record<string, { total: number; count: number; cat: string; label: string }> = {};
+
+    const addToSummary = (cat: string, txId: string | undefined, amount: number) => {
+      const label = getCategoryLabel(cat, txId);
+      const key = `${cat}||${label}`;
+      if (!summary[key]) summary[key] = { total: 0, count: 0, cat, label };
+      summary[key].total += amount;
+      summary[key].count += 1;
+    };
 
     getFilteredTransactions.forEach(item => {
-      if (item.donation && item.reconciliation.status === 'matched') {
-        const cat = item.donation.category;
-        if (!summary[cat]) summary[cat] = { total: 0, count: 0 };
-        summary[cat].total += item.reconciliation.netActual || 0;
-        summary[cat].count += 1;
+      if (!item.donation || item.reconciliation.status !== 'matched') return;
+      const net = item.reconciliation.netActual || 0;
+      const txId = item.donation.transactionId;
+
+      if (item.donation.category === 'Split') {
+        if (item.donation.splitAmounts && item.donation.splitAmounts.length > 0) {
+          // Use actual amounts recorded by the donor
+          const totalSplitAmount = item.donation.splitAmounts.reduce((sum, s) => sum + s.amount, 0);
+          item.donation.splitAmounts.forEach(s => {
+            const ratio = totalSplitAmount > 0 ? s.amount / totalSplitAmount : 1 / item.donation!.splitAmounts!.length;
+            addToSummary(s.category, txId, net * ratio);
+          });
+        } else if (item.donation.splitDetails && item.donation.splitDetails.length > 0) {
+          // Fallback to equal distribution if no amounts were extracted
+          const share = net / item.donation.splitDetails.length;
+          item.donation.splitDetails.forEach(subCat => addToSummary(subCat as DonationCategory, txId, share));
+        }
+      } else {
+        addToSummary(item.donation.category, txId, net);
       }
     });
 
@@ -255,11 +278,11 @@ export default function Dashboard() {
                   className="overflow-hidden"
                 >
                   <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white">
-                    {categorySummary.map(([cat, data]) => (
-                      <div key={cat} className="flex flex-col p-3 rounded-xl border border-slate-100 bg-slate-50/30">
+                    {categorySummary.map(([key, data]) => (
+                      <div key={key} className="flex flex-col p-3 rounded-xl border border-slate-100 bg-slate-50/30">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[cat as DonationCategory]?.split(' ')[0] || 'bg-slate-400'}`}></span>
-                          <span className="text-[10px] font-black text-slate-500 uppercase">{CATEGORY_MAP_AR[cat as DonationCategory] || cat}</span>
+                          <span className={`w-2.5 h-2.5 rounded-full border border-black/5 ${CATEGORY_COLORS[data.cat as DonationCategory]?.split(' ')[0] || 'bg-slate-400'}`}></span>
+                          <span className="text-[10px] font-black text-slate-500 uppercase">{data.label}</span>
                         </div>
                         <div className="flex items-baseline justify-between">
                           <span className="text-lg font-black tabular-nums">{data.total.toFixed(3)} <span className="text-[10px] text-slate-400">د.ب</span></span>
@@ -378,7 +401,7 @@ export default function Dashboard() {
                           </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tight border ${CATEGORY_COLORS[item.donation?.category || 'General'] || 'bg-slate-100 text-slate-600'}`}>
-                              {CATEGORY_MAP_AR[item.donation?.category || 'General'] || 'غير معروف'}
+                              {getCategoryLabel(item.donation?.category || 'General', item.donation?.transactionId)}
                             </span>
                           </td>
                         </>
@@ -392,7 +415,7 @@ export default function Dashboard() {
                         <>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tight border ${CATEGORY_COLORS[item.donation?.category || 'General'] || 'bg-slate-100 text-slate-600'}`}>
-                              {CATEGORY_MAP_AR[item.donation?.category || 'General'] || 'غير معروف'}
+                              {getCategoryLabel(item.donation?.category || 'General', item.donation?.transactionId)}
                             </span>
                           </td>
                           <td className="px-6 py-4">

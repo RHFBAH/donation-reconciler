@@ -32,18 +32,21 @@ export const STATUS_COLORS = {
 };
 
 export const CATEGORY_COLORS: Record<DonationCategory, string> = {
-    Zakat: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-    InsulinPumps: 'bg-blue-50 text-blue-700 border-blue-100',
-    General: 'bg-slate-50 text-slate-700 border-slate-100',
-    Debtors: 'bg-orange-50 text-orange-700 border-orange-100',
-    Health: 'bg-rose-50 text-rose-700 border-rose-100',
-    ProductiveFamilies: 'bg-teal-50 text-teal-700 border-teal-100',
-    Social: 'bg-cyan-50 text-cyan-700 border-cyan-100',
-    Furniture: 'bg-stone-50 text-stone-700 border-stone-100',
-    Education: 'bg-amber-50 text-amber-700 border-amber-100',
-    Humanitarian: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    Orphans: 'bg-pink-50 text-pink-700 border-pink-100',
-    Split: 'bg-purple-50 text-purple-700 border-purple-100'
+    Zakat: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    InsulinPumps: 'bg-sky-100 text-sky-800 border-sky-300',
+    General: 'bg-slate-100 text-slate-700 border-slate-300',
+    Debtors: 'bg-rose-100 text-rose-800 border-rose-300',
+    Health: 'bg-red-100 text-red-800 border-red-300',
+    ProductiveFamilies: 'bg-teal-100 text-teal-800 border-teal-300',
+    Social: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+    Furniture: 'bg-orange-100 text-orange-800 border-orange-300',
+    Education: 'bg-amber-100 text-amber-800 border-amber-300',
+    Humanitarian: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+    Orphans: 'bg-pink-100 text-pink-800 border-pink-300',
+    OrphansDinar: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    HealingAndHope: 'bg-rose-100 text-rose-800 border-rose-300',
+    AutismCenter: 'bg-blue-100 text-blue-800 border-blue-300',
+    Split: 'bg-purple-100 text-purple-800 border-purple-300'
 };
 
 export const animations = {

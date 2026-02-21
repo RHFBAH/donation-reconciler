@@ -10,6 +10,9 @@ export type DonationCategory =
     | 'Education'
     | 'Humanitarian'
     | 'Orphans'
+    | 'HealingAndHope'
+    | 'AutismCenter'
+    | 'OrphansDinar'
     | 'Split';
 
 export interface DonationRecord {
@@ -18,6 +21,7 @@ export interface DonationRecord {
     amount: number; // Gross amount from website
     category: DonationCategory;
     splitDetails?: string[]; // For donations with multiple categories
+    splitAmounts?: { category: DonationCategory; amount: number }[]; // Actual amounts per category
     date: string;
     transactionId: string;
     orderId?: string; // New field for matching
