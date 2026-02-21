@@ -21,14 +21,8 @@ export const CATEGORY_MAP_AR: Record<DonationCategory, string> = {
 
 /**
  * Returns the display label for a donation category.
- * For 'General': returns "Orphan's Dinar" if transactionId starts with 'order_'
- * (monthly donation), otherwise returns 'General Donation'.
  */
-export const getCategoryLabel = (category: string, transactionId?: string): string => {
-    if (category === 'OrphansDinar') return "Orphan's Dinar";
-    // If it's explicitly General, keep it as General Donation
-    if (category === 'General') return CATEGORY_MAP_AR.General;
-
+export const getCategoryLabel = (category: string, _transactionId?: string): string => {
     return CATEGORY_MAP_AR[category as keyof typeof CATEGORY_MAP_AR] || category;
 };
 
