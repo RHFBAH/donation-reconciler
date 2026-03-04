@@ -95,7 +95,12 @@ const CATEGORY_KEYWORD_MAP: Record<string, DonationCategory> = {
     'Healing': 'HealingAndHope',
     'Hope': 'HealingAndHope',
     'Autism': 'AutismCenter',
+    'Rehabilitation': 'AutismCenter',
     'Learning': 'AutismCenter',
+    'Difficulties': 'AutismCenter',
+    'Reassuring': 'Orphans',
+    'Homes': 'Orphans',
+    'Initiative': 'Orphans', // Usually Reassuring Homes Initiative
     'Orphan\'s Dinar': 'OrphansDinar',
     'Orphans Dinar': 'OrphansDinar',
 };
@@ -306,16 +311,29 @@ export const parseDonationFile = async (file: File, userEncoding: string = 'auto
 
             // Fallback to single record (existing logic)
             let category: DonationCategory = 'General';
-            const foundCategories = new Set<DonationCategory>();
+            const matches: { category: DonationCategory, keyword: string }[] = [];
 
             for (const [key, mappedCategory] of Object.entries(CATEGORY_KEYWORD_MAP)) {
                 if (rawCategory.toLowerCase().includes(key.toLowerCase())) {
-                    foundCategories.add(mappedCategory);
+                    matches.push({ category: mappedCategory, keyword: key });
                 }
             }
 
-            if (foundCategories.size === 1) {
-                category = Array.from(foundCategories)[0];
+            if (matches.length > 0) {
+                // Pick the most specific match (longest keyword)
+                // Also prioritize non-General categories
+                const sortedMatches = matches.sort((a, b) => {
+                    // Prioritize specificity (length)
+                    if (b.keyword.length !== a.keyword.length) {
+                        return b.keyword.length - a.keyword.length;
+                    }
+                    // Then prioritize specific categories over 'General'
+                    if (a.category === 'General' && b.category !== 'General') return 1;
+                    if (a.category !== 'General' && b.category === 'General') return -1;
+                    return 0;
+                });
+
+                category = sortedMatches[0].category;
             }
 
             // Auto-categorize monthly orders (order_ prefix) as OrphansDinar if General

@@ -12,6 +12,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.27.5",
+    "html-to-image": "^1.11.13",
     "jschardet": "^3.1.4",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
@@ -20,6 +21,7 @@
     "papaparse": "^5.5.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.10"
